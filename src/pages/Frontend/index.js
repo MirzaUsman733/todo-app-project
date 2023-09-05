@@ -32,18 +32,12 @@ import Home from './Home';
 import Calendar from './Calendar';
 import Upcoming from './Upcoming';
 import Today from './Today';
-import Personal from './Personal';
 import {
   deleteDoc,
-  // collection,
   doc,
-  // getDocs,
-  // query,
   setDoc,
-  // where,
 } from 'firebase/firestore';
 import Title from 'antd/es/skeleton/Title';
-// import { useCallback } from 'react';
 import { useLists } from 'contexts/ListsContext';
 import { useEffect } from 'react';
 const { Header, Sider, Content } = Layout;
@@ -53,14 +47,12 @@ export default function Hero() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [screenWidth, setScreenWidth] = useState(window.innerWidth);
-  // const [lists, setLists] = useState([]);
   const [addList, setAddList] = useState('');
   const [deletingListId, setDeletingListId] = useState(null);
   const {
     token: { colorBgContainer },
   } = theme.useToken();
 
-  // Logout Functionality
   const handleLogout = () => {
     signOut(auth)
       .then(() => {
@@ -319,7 +311,6 @@ export default function Hero() {
               <Route path="calendar" element={<Calendar />} />
               <Route path="today" element={<Today />} />
               {/* <Route path={`'list'/:${list}`}/> */}
-              <Route path="personal" element={<Personal />} />
             </Routes>
           </Content>
         </Layout>
