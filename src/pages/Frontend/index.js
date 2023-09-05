@@ -33,8 +33,6 @@ import Calendar from './Calendar';
 import Upcoming from './Upcoming';
 import Today from './Today';
 import Personal from './Personal';
-import Work from './Work';
-import List from './List';
 import {
   deleteDoc,
   // collection,
@@ -322,8 +320,6 @@ export default function Hero() {
               <Route path="today" element={<Today />} />
               {/* <Route path={`'list'/:${list}`}/> */}
               <Route path="personal" element={<Personal />} />
-              <Route path="work" element={<Work />} />
-              <Route path="/list/:id" element={<List />} />
             </Routes>
           </Content>
         </Layout>
