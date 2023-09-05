@@ -1,30 +1,35 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Col, DatePicker, Form, Input, Row, Select, Typography, message } from 'antd';
+import {
+  Button,
+  Col,
+  DatePicker,
+  Form,
+  Input,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Typography,
+  message,
+} from 'antd';
 import { firestore } from 'config/firebase';
 import { useAuthContext } from 'contexts/AuthContext';
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  query,
-  serverTimestamp,
-  setDoc,
-  where,
-} from 'firebase/firestore';
-import React, { useCallback, useEffect, useState,} from 'react';
+import { useLists } from 'contexts/ListsContext';
+import { useStickyNotes } from 'contexts/StickyNotesContext';
+import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import React, { useState } from 'react';
 import { SketchPicker } from 'react-color';
-const initialState = { title: '', description: '', status: "", date: '' };
+const initialState = { title: '', description: '', status: '', date: '' };
 const { Title } = Typography;
 
 export default function Hero() {
   const { user } = useAuthContext();
+  const { stickyNotes, setStickyNotes, isLoading } = useStickyNotes();
+  const { lists } = useLists();
   const [state, setState] = useState(initialState);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [stickyNotes, setStickyNotes] = useState([]);
   const [selectedColor, setSelectedColor] = useState('#F8F9FA');
   const [editingSticky, setEditingSticky] = useState(null);
-
   // On Change Functionality
   const handleChange = (e) =>
     setState((s) => ({ ...s, [e.target.name]: e.target.value }));
@@ -33,15 +38,12 @@ export default function Hero() {
       `rgba(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b}, 0.5)`
     );
   };
-  // const handleDate = (_, date) => setState((s) => ({ ...s, date }));
   const handleDate = (_, date) => {
     setState((s) => ({ ...s, date }));
   };
-  // Add Functionality
   const handleSubmit = async (e) => {
     e.preventDefault();
-// setEditingSticky(null);
-    let { title, description, date,status } = state;
+    let { title, description, date, status } = state;
 
     if (!title) {
       return message.error('Please enter title');
@@ -65,9 +67,9 @@ export default function Hero() {
     try {
       await setDoc(doc(firestore, 'sticky', stick.id), stick);
       message.success('A new todo added successfully');
+      setStickyNotes((prevStickyNotes) => [...prevStickyNotes, stick]);
       setState(initialState);
       setSelectedColor('ffffff');
-      getSticky();
     } catch (e) {
       console.error('Error adding document: ', e);
     }
@@ -75,27 +77,15 @@ export default function Hero() {
 
     setIsProcessing(false);
   };
-  // Get Sticky Notes
-  const getSticky = useCallback(async () => {
-    // const queryRef = collection(firestore, 'sticky');
-    const q = query(
-      collection(firestore, 'sticky'),
-      where("createdBy.uid", "==", user.uid)
-    );
-    const querySnapshot = await getDocs(q);
-    const stickyNotesData = querySnapshot.docs.map((doc) => doc.data());
-    setStickyNotes(stickyNotesData);
-  }, [user.uid]);
-  useEffect(() => {
-    getSticky();
-  }, [getSticky]);
 
   // Delete Functionality
   const handleDelete = async (stickyId) => {
     try {
       await deleteDoc(doc(firestore, 'sticky', stickyId));
       message.success('Sticky note deleted successfully');
-      getSticky();
+      setStickyNotes((prevStickyNotes) =>
+        prevStickyNotes.filter((sticky) => sticky.id !== stickyId)
+      );
     } catch (error) {
       console.error('Error deleting sticky note: ', error);
     }
@@ -138,43 +128,40 @@ export default function Hero() {
     try {
       await setDoc(doc(firestore, 'sticky', editingSticky), updatedSticky);
       message.success('Sticky note updated successfully');
-      // setState((prevState) => ({
-      //   ...prevState,
-      //   color: selectedColor,
-      // }));
-      
+      setStickyNotes((prevStickyNotes) =>
+        prevStickyNotes.map((sticky) =>
+          sticky.id === editingSticky ? updatedSticky : sticky
+        )
+      );
       setEditingSticky(null);
       setSelectedColor('#F8F9FA');
-      getSticky();
       setState(initialState);
     } catch (error) {
       console.error('Error updating sticky note: ', error);
     }
     setIsProcessing(false);
-    setEditingSticky(null)
+    setEditingSticky(null);
     setState(initialState);
   };
-// Get List
-const [lists, setLists] = useState([]);
-const getList = useCallback(async () => {
-  const q = query(
-    collection(firestore, 'lists'),
-    // where('id', '==', 'all'),
-    where('createdBy.uid', '==', user.uid)
-  );
-  const querySnapshot = await getDocs(q);
-  const addListData = querySnapshot.docs.map((doc) => doc.data());
-  setLists(addListData);
-  // setUpperList(addUpperListData)
-}, [user.uid]);
-useEffect(() => {
-  getList();
-}, [getList]);
-
+  if (isLoading)
+    return (
+      <Space
+        size="middle"
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignContent: 'center',
+        }}
+      >
+        <Spin size="large" />
+      </Space>
+    );
   return (
     <>
       <div className="container">
-        <ul className="row">
+        <ul className="row px-0">
           {stickyNotes?.map((stickyNote) => (
             <li
               className="col-12 col-md-6 col-lg-4"
@@ -224,13 +211,7 @@ useEffect(() => {
                   <p>{stickyNote.description}</p>
                 </div>
                 <p>
-                  {/* {new Date(
-                    stickyNote.dateCreated.seconds * 1000
-                  ).toLocaleString()} */}
-                {/* {stickyNote.dateCreated?.seconds
-    ? new Date(stickyNote.dateCreated.seconds * 1000).toLocaleString()
-    : ''} */}
-       {stickyNote.dateCreated?.seconds &&
+                  {stickyNote.dateCreated?.seconds &&
                     new Date(
                       stickyNote.dateCreated.seconds * 1000
                     ).toLocaleString()}
@@ -238,7 +219,10 @@ useEffect(() => {
               </div>
             </li>
           ))}
-          <li className="col-4" style={{ listStyleType: 'none' }}>
+          <li
+            className="col-12 col-md-6 col-lg-4"
+            style={{ listStyleType: 'none' }}
+          >
             <button
               style={{
                 marginBottom: '10px',
@@ -328,15 +312,29 @@ useEffect(() => {
                         </Form.Item>
                       </Col>
                       <Col xs={24} lg={12}>
-                    <Form.Item label="Status">
-                      <Select  getPopupContainer={(trigger) =>
-                              trigger.parentElement} value={state.status} onChange={status => setState(s => ({ ...s, status }))}>
-                        {lists.map((list) => {
-                          return <Select.Option key={list.listId} value={list.name}>{list.name}</Select.Option>
-                        })}
-                      </Select>
-                    </Form.Item>
-                  </Col>
+                        <Form.Item label="Status">
+                          <Select
+                            getPopupContainer={(trigger) =>
+                              trigger.parentElement
+                            }
+                            value={state.status}
+                            onChange={(status) =>
+                              setState((s) => ({ ...s, status }))
+                            }
+                          >
+                            {lists.map((list) => {
+                              return (
+                                <Select.Option
+                                  key={list.listId}
+                                  value={list.name}
+                                >
+                                  {list.name}
+                                </Select.Option>
+                              );
+                            })}
+                          </Select>
+                        </Form.Item>
+                      </Col>
                     </Row>
                   </Form>
                 </div>
@@ -351,7 +349,7 @@ useEffect(() => {
                 </button>
                 {editingSticky ? (
                   <Button
-                   htmlType="submit"
+                    htmlType="submit"
                     type="primary"
                     className="w-50"
                     loading={isProcessing}

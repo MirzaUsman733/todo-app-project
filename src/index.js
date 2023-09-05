@@ -4,15 +4,21 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import AuthContextProvider from 'contexts/AuthContext';
+import { StickyNotesProvider } from 'contexts/StickyNotesContext';
+import { ListsProvider } from 'contexts/ListsContext';
 import { BrowserRouter } from 'react-router-dom';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <AuthContextProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <StickyNotesProvider>
+        <ListsProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ListsProvider>
+      </StickyNotesProvider>
     </AuthContextProvider>
   </React.StrictMode>
 );

@@ -1,37 +1,16 @@
-import { firestore } from 'config/firebase';
-import { useAuthContext } from 'contexts/AuthContext';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
-import { useCallback } from 'react';
+import { useStickyNotes } from 'contexts/StickyNotesContext';
+import React from 'react';
 
 export default function Hero() {
-  const {user} = useAuthContext();
-  const [stickyNotes, setStickyNotes] = useState([]);
-
-  const getSticky = useCallback( async () => {
-    const currentDate = new Date().toISOString().split('T')[0];
-    const q = query(
-      collection(firestore, 'sticky'),
-      where('date', '==', currentDate),
-      where("createdBy.uid", "==", user.uid)
-    );
-
-    const querySnapshot = await getDocs(q);
-
-    const stickyNotesData = querySnapshot.docs.map((doc) => doc.data());
-    setStickyNotes(stickyNotesData);
-  },[user.uid]
-  )
-
-  useEffect(() => {
-    getSticky();
-  }, [getSticky]);
+  const { stickyNotes } = useStickyNotes();
+  const currentDate = new Date().toISOString().split('T')[0];
+  const todayStickyNotes = stickyNotes.filter((note) => note.date === currentDate);
 
   return (
     <div>
       <div className="container">
         <ul className="row">
-          {stickyNotes?.map((stickyNote) => (
+          {todayStickyNotes?.map((stickyNote) => (
             <li
               className="col-4"
               style={{ listStyleType: 'none' }}
@@ -58,20 +37,6 @@ export default function Hero() {
                   <div className="dropdown">
                     <div className="dropdown-toggle">⋮</div>
                     <div className="dropdown-content text-center">
-                      {/* <button
-                        className="edit border border-0 btn btn-primary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#exampleModal"
-                        onClick={() => handleEdit(stickyNote.id)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="delete border border-0 btn btn-danger"
-                        onClick={() => handleDelete(stickyNote.id)}
-                      >
-                        Delete
-                      </button> */}
                     </div>
                   </div>
                 </div>

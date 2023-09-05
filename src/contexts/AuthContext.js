@@ -1,7 +1,3 @@
-// import { message } from 'antd'
-import { auth, firestore } from '../config/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 import React, {
   useState,
   useEffect,
@@ -9,6 +5,9 @@ import React, {
   useContext,
   useReducer,
 } from 'react';
+import { auth, firestore } from '../config/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 const initialState = { isAuth: false, user: {} };
@@ -42,13 +41,10 @@ export default function AuthContextProvider({ children }) {
     const docRef = doc(firestore, 'users', user.uid);
     const docSnap = await getDoc(docRef);
 
-    // console.log('auth user', user)
     if (docSnap.exists()) {
       const user = docSnap.data();
-      // console.log('user', user)
       dispatch({ type: 'SET_LOGGED_IN', payload: { user } });
     } else {
-      // message.error("User data not found. Please try again or contact support team")
       console.log('User data not found');
     }
     setIsAppLoading(false);

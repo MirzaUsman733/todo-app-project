@@ -1,6 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
-import { AiOutlineCalendar, AiOutlinePlus } from 'react-icons/ai';
+import {
+  AiOutlineCalendar,
+  AiOutlineDelete,
+  AiOutlinePlus,
+} from 'react-icons/ai';
 import { MdOutlineToday } from 'react-icons/md';
 import { BsChevronDoubleRight, BsSticky } from 'react-icons/bs';
 import { GoSignOut } from 'react-icons/go';
@@ -17,6 +21,8 @@ import {
   Row,
   Col,
   Input,
+  Space,
+  Spin,
 } from 'antd';
 import { useAuthContext } from 'contexts/AuthContext';
 import { signOut } from 'firebase/auth';
@@ -30,25 +36,32 @@ import Personal from './Personal';
 import Work from './Work';
 import List from './List';
 import {
-  collection,
+  deleteDoc,
+  // collection,
   doc,
-  getDocs,
-  query,
+  // getDocs,
+  // query,
   setDoc,
-  where,
+  // where,
 } from 'firebase/firestore';
 import Title from 'antd/es/skeleton/Title';
-import { useCallback } from 'react';
+// import { useCallback } from 'react';
+import { useLists } from 'contexts/ListsContext';
+import { useEffect } from 'react';
 const { Header, Sider, Content } = Layout;
 export default function Hero() {
+  const { lists, setLists, isLoading } = useLists();
   const { isAuth, dispatch, user } = useAuthContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [lists, setLists] = useState([]);
+  const [screenWidth, setScreenWidth] = useState(window.innerWidth);
+  // const [lists, setLists] = useState([]);
   const [addList, setAddList] = useState('');
+  const [deletingListId, setDeletingListId] = useState(null);
   const {
     token: { colorBgContainer },
   } = theme.useToken();
+
   // Logout Functionality
   const handleLogout = () => {
     signOut(auth)
@@ -57,7 +70,7 @@ export default function Hero() {
         dispatch({ type: 'SET_LOGGED_OUT' });
       })
       .catch((err) => {
-        message.error('Signout not successful');
+        message.error('Signout not successful: ' + err);
       });
   };
   const showModal = () => {
@@ -80,6 +93,7 @@ export default function Hero() {
   const handleAddList = async () => {
     try {
       await setDoc(doc(firestore, 'lists', listData.listId), listData);
+      setLists([...lists, listData]);
       setAddList('');
       setIsModalOpen(false);
     } catch (e) {
@@ -89,24 +103,60 @@ export default function Hero() {
   };
   const handleChange = (e) => {
     setAddList(e.target.value);
-    
   };
-  const getList = useCallback( async () => {
-    const q = query(
-      collection(firestore, 'lists'),
-      // where('id', '==', 'all'),
-      where('createdBy.uid', '==', user.uid)
-    );
+  const handleDeleteList = async (listId) => {
+    try {
+      setDeletingListId(listId);
 
-    const querySnapshot = await getDocs(q);
+      // Remove the list from Firestore
+      await deleteDoc(doc(firestore, 'lists', listId));
 
-    const addListData = querySnapshot.docs.map((doc) => doc.data());
-    setLists(addListData);
-  },[user.uid]
-  )
+      // Update the local state to remove the deleted list
+      const updatedLists = lists.filter((list) => list.listId !== listId);
+      setLists(updatedLists);
+
+      message.success('List deleted successfully');
+    } catch (error) {
+      console.error('Error deleting list:', error);
+      message.error('Error deleting list');
+    } finally {
+      setDeletingListId(null);
+    }
+  };
+
+  const handleScreenWidthChange = () => {
+    setScreenWidth(window.innerWidth);
+  };
+
   useEffect(() => {
-    getList();
-  }, [getList]);
+    window.addEventListener('resize', handleScreenWidthChange);
+    return () => {
+      window.removeEventListener('resize', handleScreenWidthChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (screenWidth < 768) {
+      setCollapsed(true);
+    } else {
+      setCollapsed(false);
+    }
+  }, [screenWidth]);
+  if (isLoading)
+    return (
+      <Space
+        size="middle"
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignContent: 'center',
+        }}
+      >
+        <Spin size="large" />
+      </Space>
+    );
   return (
     <>
       <Layout>
@@ -126,11 +176,7 @@ export default function Hero() {
               onClick={() => setCollapsed(!collapsed)}
               style={{
                 display: 'flex',
-                // flexDirection: 'row-reverse',
-                // alignItems: 'end',
                 fontSize: '16px',
-                // width: "90%",
-                // height: 64,
               }}
             />
           </div>
@@ -147,7 +193,6 @@ export default function Hero() {
                     Upcoming
                   </Link>
                 ),
-                // onClick: () => handleMenuItemClick('/upcoming'),
               },
               {
                 key: '/today',
@@ -161,7 +206,7 @@ export default function Hero() {
               {
                 key: '4',
                 icon: <AiOutlineCalendar />,
-                // label: 'Calender',
+
                 label: (
                   <Link to="/calendar" className="text-decoration-none">
                     Calendar
@@ -178,38 +223,6 @@ export default function Hero() {
                 ),
                 to: 'stickywall',
               },
-
-              // {
-              //   key: 6,
-              //   label: 'Lists',
-              //   istitle: 'true',
-              //   className: 'menu-title',
-              // },
-
-              // {
-              //   key: '7',
-              //   icon: <AiOutlineUser />,
-              //   // label: 'Personal',
-              //   label: (
-              //     <Link to="/personal" className="text-decoration-none">
-              //       Personal
-              //     </Link>
-              //   )
-              // },
-              // {
-              //   key: '8',
-              //   icon: <BsPersonWorkspace />,
-              //   label: (
-              //     <Link to="/work" className="text-decoration-none">
-              //       Work
-              //     </Link>
-              //   )
-              // },
-              // {
-              //   key: '9',
-              //   icon: <AiOutlineUnorderedList />,
-              //   label: 'List 1',
-              // },
             ]}
           />
           <Button type="dashed" className="mt-2 w-100" onClick={showModal}>
@@ -218,9 +231,30 @@ export default function Hero() {
 
           <ul>
             {lists?.map((list) => {
+              const isDeleting = deletingListId === list.listId;
               return (
-                <li key={list.listId} className='mt-3'>
-                  <Link className='text-decoration-none' to={`/list/${list.listId}`}>{list.name}</Link>
+                <li
+                  key={list.listId}
+                  className="mt-3"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Link
+                    className="text-decoration-none"
+                    to={`/list/${list.listId}`}
+                  >
+                    {list.name}
+                  </Link>
+                  <button
+                    className="border-0 btn btn-danger px-1 py-0"
+                    onClick={() => handleDeleteList(list.listId)}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? 'Deleting...' : <AiOutlineDelete />}
+                  </button>
                 </li>
               );
             })}

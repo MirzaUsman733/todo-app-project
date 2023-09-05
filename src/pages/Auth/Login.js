@@ -34,7 +34,7 @@ export default function Login() {
         setIsProcessing(false);
       });
   };
- 
+
   return (
     <main className="auth">
       <div className="container">
